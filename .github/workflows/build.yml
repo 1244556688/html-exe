@@ -24,7 +24,9 @@ jobs:
 
       - name: Build EXE
         run: npm run dist
-
+        env:
+         GH_TOKEN: ${{ secrets.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 }}
+      
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
