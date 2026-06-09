@@ -18,12 +18,8 @@
       "output": "dist"
     },
     "win": {
-      "target": "nsis"
-      {
-  "build": {
-    "win": {
-      "icon": "build/icon.ico",
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.ico"
     }
   }
 }
