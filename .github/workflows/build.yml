@@ -1,10 +1,10 @@
-name: Build Windows EXE
+name: Build and Release
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -22,11 +22,7 @@ jobs:
       - name: Install
         run: npm install
 
-      - name: Build EXE
+      - name: Build
         run: npm run dist
-      
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: MyApp-Windows
-          path: dist/**
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
