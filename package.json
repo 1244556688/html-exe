@@ -1,29 +1,42 @@
 {
   "name": "myapp",
   "version": "1.0.0",
-  "author": "Your Name",
+  "author": "1244556688",
   "description": "My Electron App",
   "main": "main.js",
+
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/1244556688/html-exe.git"
+  },
+
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win --publish always"
+    "dist": "electron-builder --win"
   },
+
   "devDependencies": {
     "electron": "^38.8.6",
     "electron-builder": "^26.15.2"
   },
+
   "build": {
     "appId": "com.myapp.desktop",
     "productName": "MyApp",
-    "directories": {
-      "output": "dist"
-    },
+
     "win": {
       "target": "nsis"
     },
+
+    "directories": {
+      "output": "dist"
+    },
+
     "publish": [
       {
-        "provider": "github"
+        "provider": "github",
+        "owner": "1244556688",
+        "repo": "html-exe"
       }
     ]
   }
