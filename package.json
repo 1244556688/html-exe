@@ -2,13 +2,8 @@
   "name": "myapp",
   "version": "1.0.0",
   "author": "1244556688",
-  "description": "My Electron App",
   "main": "main.js",
-
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/1244556688/html-exe.git"
-  },
+  "description": "Beautiful Electron App",
 
   "scripts": {
     "start": "electron .",
@@ -17,7 +12,8 @@
 
   "devDependencies": {
     "electron": "^38.8.6",
-    "electron-builder": "^26.15.2"
+    "electron-builder": "^26.15.2",
+    "png-to-ico": "^2.1.0"
   },
 
   "build": {
@@ -29,6 +25,7 @@
     },
 
     "win": {
+      "icon": "build/icon.ico",
       "target": "nsis"
     }
   }
