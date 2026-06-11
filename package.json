@@ -12,7 +12,7 @@
 
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win --publish never"
   },
 
   "devDependencies": {
@@ -24,20 +24,12 @@
     "appId": "com.myapp.desktop",
     "productName": "MyApp",
 
-    "win": {
-      "target": "nsis"
-    },
-
     "directories": {
       "output": "dist"
     },
 
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "1244556688",
-        "repo": "html-exe"
-      }
-    ]
+    "win": {
+      "target": "nsis"
+    }
   }
 }
