@@ -1,594 +1,686 @@
-
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Glass Player — Ultimate</title>
+<title>Nova Notes Pro - 懸浮介面版</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
-    :root {
-        --bg-color: #050505;
-        --card-bg: rgba(255, 255, 255, 0.03);
-        --glass-border: rgba(255, 255, 255, 0.08);
-        --text-main: #ffffff;
-        --text-muted: rgba(255, 255, 255, 0.5);
-        --accent-1: #7C5CFF; /* Purple */
-        --accent-2: #00E5A8; /* Teal */
-        --gradient: linear-gradient(135deg, var(--accent-2), var(--accent-1));
-    }
+:root {
+  /* 賽博霓虹雙主色 */
+  --primary: #00e5ff;
+  --primary-glow: rgba(0, 229, 255, 0.4);
+  --secondary: #b942ff;
+  --secondary-glow: rgba(185, 66, 255, 0.4);
+  
+  --bg: #030508;
+  --panel-bg: rgba(12, 16, 26, 0.65);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --panel-hover: rgba(255, 255, 255, 0.12);
+  
+  --text: #f0f4ff;
+  --text-muted: #8a96b3;
+  --text-dim: #4a587a;
+  
+  --danger: #ff426f;
+  --success: #00ff88;
+  --warn: #ffb84d;
+  --sidebar-w: 320px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
 
-    * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
-    
-    body {
-        margin: 0;
-        height: 100vh;
-        background-color: var(--bg-color);
-        background-image: 
-            radial-gradient(circle at 15% 50%, rgba(124, 92, 255, 0.15), transparent 25%),
-            radial-gradient(circle at 85% 30%, rgba(0, 229, 168, 0.1), transparent 25%);
-        color: var(--text-main);
-        font-family: 'Inter', 'Microsoft JhengHei', system-ui, sans-serif;
-        overflow: hidden;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
+body{
+  height:100vh;width:100vw;overflow:hidden;
+  font-family:'Noto Sans TC',sans-serif;
+  background-color: var(--bg);
+  color:var(--text);
+  -webkit-font-smoothing: antialiased;
+}
 
-    /* === 排版佈局 (已調整高度) === */
-    .wrap {
-        display: flex;
-        width: 95%;
-        max-width: 1100px;
-        /* 從 85vh 改為 75vh，讓底部抬高 */
-        height: 75vh; 
-        gap: 20px;
-        position: relative;
-        z-index: 10;
-    }
+/* ── 極光環境光與星空背景 ── */
+.ambient-light {
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background: 
+    radial-gradient(circle at 15% 20%, rgba(185, 66, 255, 0.15), transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(0, 229, 255, 0.12), transparent 40%);
+  animation: pulseLight 10s ease-in-out infinite alternate;
+}
+@keyframes pulseLight {
+  0% { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1.05); }
+}
+canvas#bg{position:fixed;inset:0;z-index:1;pointer-events:none; opacity: 0.8;}
 
-    .panel {
-        background: var(--card-bg);
-        border: 1px solid var(--glass-border);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border-radius: 24px;
-        padding: 24px;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-        display: flex;
-        flex-direction: column;
-    }
+/* ── 全新懸浮佈局 (Floating Layout) ── */
+.app{
+  display:flex;height:100vh;width:100vw;position:relative;z-index:2;
+  padding: 20px; gap: 20px; /* 懸浮視窗的關鍵 */
+}
 
-    /* === 左側：播放清單 === */
-    #left { width: 300px; }
-    
-    .list-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid var(--glass-border);
-    }
-    
-    .playlist-scroll {
-        flex: 1;
-        overflow-y: auto;
-        padding-right: 4px;
-        /* 增加底部內距，避免清單最後一項被按鈕遮擋太近 */
-        padding-bottom: 10px;
-    }
-    
-    .playlist-scroll::-webkit-scrollbar { width: 4px; }
-    .playlist-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:var(--primary)}
 
-    .track-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px;
-        border-radius: 12px;
-        margin-bottom: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-        border: 1px solid transparent;
-        background: rgba(255,255,255,0.01);
-    }
+/* ── Auth 模態框 ── */
+#auth{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(24px);display:flex;align-items:center;justify-content:center}
+.auth-card{background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:28px;padding:48px 40px;width:380px;text-align:center;box-shadow: 0 24px 60px rgba(0,0,0,0.6);}
+.auth-card .logo{font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;color:#fff;letter-spacing:-1px;margin-bottom:8px}
+.auth-card .logo span{background:linear-gradient(135deg, var(--primary), var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.auth-card .sub{font-size:14px;color:var(--text-muted);margin-bottom:32px}
+.field{width:100%;padding:16px 20px;background:rgba(0,0,0,0.4);border:1px solid var(--panel-border);border-radius:16px;color:var(--text);font-family:inherit;font-size:14px;outline:none;transition:all 0.3s;display:block;margin-bottom:16px}
+.field:focus{border-color:var(--primary);box-shadow:0 0 20px var(--primary-glow);background:rgba(0,0,0,0.6)}
+.auth-err{font-size:13px;color:var(--danger);min-height:18px;margin-top:12px}
 
-    .track-item:hover { background: rgba(255,255,255,0.05); }
-    .track-item.active {
-        background: rgba(124, 92, 255, 0.15);
-        border-color: rgba(124, 92, 255, 0.4);
-    }
+/* ── 懸浮 Sidebar ── */
+.sidebar{width:var(--sidebar-w);min-width:260px;max-width:480px;background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:24px;display:flex;flex-direction:column;backdrop-filter:blur(20px);transition:all 0.4s cubic-bezier(.4,0,.2,1);box-shadow: 0 10px 40px rgba(0,0,0,0.3);}
+.sidebar.hidden{margin-left:calc(-1 * var(--sidebar-w) - 40px); opacity:0;}
+.sb-head{padding:24px 20px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.05)}
+.logo-mark{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;color:#fff;}
+.logo-mark span{color:var(--primary)}
+.sb-search{margin:16px 16px 0;position:relative}
+.sb-search input{width:100%;padding:12px 16px 12px 40px;background:rgba(0,0,0,0.3);border:1px solid var(--panel-border);border-radius:14px;color:var(--text);font-size:14px;outline:none;transition:all 0.3s}
+.sb-search input:focus{border-color:var(--secondary);box-shadow:0 0 15px var(--secondary-glow)}
+.sb-search .ico{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--text-muted);pointer-events:none}
+.tag-bar{display:flex;gap:8px;padding:16px;overflow-x:auto;flex-shrink:0}
+.tag-bar::-webkit-scrollbar{height:0}
+.tag-chip{padding:6px 14px;border-radius:12px;font-size:12px;font-weight:600;border:1px solid var(--panel-border);color:var(--text-muted);cursor:pointer;white-space:nowrap;transition:all 0.2s}
+.tag-chip.active,.tag-chip:hover{border-color:var(--primary);color:#000;background:var(--primary); box-shadow: 0 4px 12px var(--primary-glow);}
+.note-list{flex:1;overflow-y:auto;padding:8px 12px}
 
-    .track-info { display: flex; flex-direction: column; overflow: hidden; }
-    .track-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
-    
-    /* === 按鈕組 (已調整位置) === */
-    .btn-group { 
-        margin-top: 16px; 
-        display: flex; 
-        gap: 10px;
-        /* 這裡增加了 margin-bottom，讓按鈕往上抬 */
-        margin-bottom: 12px;
-    }
-    
-    .btn-file {
-        flex: 1;
-        background: var(--gradient);
-        color: #000;
-        font-weight: 800;
-        border-radius: 50px;
-        padding: 12px;
-        text-align: center;
-        cursor: pointer;
-        font-size: 14px;
-        transition: transform 0.1s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        box-shadow: 0 4px 15px rgba(0, 229, 168, 0.2);
-    }
-    .btn-file:active { transform: scale(0.98); }
-    .btn-ghost {
-        background: transparent;
-        border: 1px solid var(--glass-border);
-        color: var(--text-muted);
-        padding: 0 16px;
-        border-radius: 50px;
-        cursor: pointer;
-        transition: 0.2s;
-    }
-    .btn-ghost:hover { border-color: #ff5c5c; color: #ff5c5c; }
+/* 3D 筆記卡片 */
+@keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+.note-item{animation: slideUp 0.3s cubic-bezier(0.2,0.8,0.2,1) forwards; padding:16px;border-radius:16px;margin-bottom:12px;cursor:pointer;border:1px solid transparent;background:rgba(255,255,255,0.02);transition:all 0.3s ease;display:flex;gap:10px;align-items:flex-start;position:relative}
+.note-item:hover{background:rgba(255,255,255,0.06);border-color:var(--panel-hover);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.2)}
+.note-item.active{background:linear-gradient(135deg, rgba(0,229,255,0.1), rgba(185,66,255,0.1));border-color:var(--primary);box-shadow:0 8px 24px var(--primary-glow); border-right: 4px solid var(--primary);}
+.note-pin{font-size:11px;color:var(--secondary);margin-bottom:6px;font-weight:700;letter-spacing:1px;}
+.note-title{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;margin-bottom:6px;font-family:'Space Grotesk',sans-serif;}
+.note-meta{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.note-tag{padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700}
+.note-actions{display:flex;gap:4px;opacity:0;transition:opacity 0.2s;flex-shrink:0}
+.note-item:hover .note-actions{opacity:1}
+.icon-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:8px;border-radius:10px;font-size:15px;transition:all 0.2s}
+.icon-btn:hover{color:#fff;background:rgba(255,255,255,0.1);transform:scale(1.1)}
+.icon-btn.danger:hover{color:var(--danger);background:rgba(255,66,111,0.2)}
+.icon-btn.pin-active{color:var(--secondary)}
+.sb-foot{padding:16px;border-top:1px solid rgba(255,255,255,0.05);display:flex;gap:10px}
 
-    /* === 中間：視覺與資訊 === */
-    #center { flex: 1; align-items: center; justify-content: center; text-align: center; position: relative; }
-    
-    #musicBall {
-        width: 180px;
-        height: 180px;
-        border-radius: 50%;
-        background: var(--gradient);
-        box-shadow: 0 0 60px rgba(124, 92, 255, 0.3);
-        margin: 40px 0;
-        transition: transform 0.05s ease-out;
-        position: relative;
-    }
-    
-    #musicBall::after {
-        content: '';
-        position: absolute;
-        top: 20px; left: 30px;
-        width: 40px; height: 20px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.3);
-        transform: rotate(-45deg);
-    }
+/* ── 懸浮 Main Editor ── */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:24px;backdrop-filter:blur(20px);box-shadow: 0 10px 40px rgba(0,0,0,0.3);overflow:hidden;}
+.ed-header{padding:0 36px;height:70px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:16px;flex-shrink:0}
+#note-title{flex:1;background:none;border:none;outline:none;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;transition:all 0.3s;padding:8px 0;}
+#note-title::placeholder{color:var(--text-dim)}
+#note-title.err{border-bottom:2px solid var(--danger)}
+.view-modes{display:flex;gap:4px;background:rgba(0,0,0,0.4);border-radius:12px;padding:4px}
+.vm-btn{padding:8px 14px;border-radius:10px;border:none;background:none;color:var(--text-muted);font-size:13px;cursor:pointer;transition:all 0.2s;font-weight:600;}
+.vm-btn.active{background:var(--primary);color:#000;box-shadow:0 0 15px var(--primary-glow)}
+.toolbar{padding:0 36px;height:54px;background:rgba(0,0,0,0.2);border-bottom:1px solid rgba(255,255,255,0.05);display:flex;gap:6px;align-items:center;flex-shrink:0;overflow-x:auto;}
+.tb-btn{padding:8px 12px;border:none;background:rgba(255,255,255,0.03);border-radius:10px;color:var(--text-muted);cursor:pointer;font-size:13px;font-weight:600;transition:all 0.2s;white-space:nowrap;border:1px solid transparent;}
+.tb-btn:hover{background:rgba(255,255,255,0.08);color:#fff;border-color:var(--panel-hover);transform:translateY(-1px);}
+.tb-sep{width:1px;height:24px;background:var(--panel-border);margin:0 6px;flex-shrink:0}
 
-    #currentTitle { font-size: 24px; font-weight: 700; margin-bottom: 8px; max-width: 90%; }
-    #currentTimeDisplay { font-family: monospace; font-size: 16px; color: var(--accent-2); background: rgba(0, 229, 168, 0.1); padding: 4px 12px; border-radius: 20px; }
+/* 編輯器與預覽 */
+.ed-body{flex:1;display:flex;overflow:hidden;position:relative}
+#editor{flex:1;padding:40px 48px;border:none;outline:none;resize:none;font-family:'JetBrains Mono',monospace;font-size:16px;line-height:2;background:transparent;color:#d4d9e8;tab-size:2;caret-color:var(--primary)}
+#editor::placeholder{color:var(--text-dim)}
+#preview{flex:1;padding:40px 48px;overflow-y:auto;background:rgba(0,0,0,0.3);border-left:1px solid rgba(255,255,255,0.05);display:none;line-height:1.9;font-size:16px}
+.statusbar{height:40px;padding:0 36px;background:rgba(0,0,0,0.4);border-top:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--text-muted);flex-shrink:0;font-family:'JetBrains Mono',monospace;}
 
-    /* === 右側：控制面板 === */
-    #right { width: 260px; justify-content: center; gap: 30px; }
+/* ── 漸層按鈕 ── */
+.btn{padding:12px 24px;border-radius:14px;border:none;cursor:pointer;font-weight:700;font-size:14px;transition:all 0.3s;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:'Space Grotesk',sans-serif;}
+.btn:hover{transform:translateY(-2px)}
+.btn:active{transform:scale(0.96)}
+.btn-primary{background:linear-gradient(135deg, var(--primary), var(--secondary));color:#000;box-shadow:0 8px 24px rgba(185,66,255,0.3)}
+.btn-primary:hover{box-shadow:0 12px 32px rgba(0,229,255,0.4)}
+.btn-ghost{background:rgba(255,255,255,0.05);color:var(--text);border:1px solid var(--panel-border)}
+.btn-ghost:hover{background:rgba(255,255,255,0.1);border-color:var(--text-muted)}
+.btn-sm{padding:8px 16px;font-size:13px;border-radius:10px}
+.btn-danger{background:rgba(255,66,111,0.15);border:1px solid rgba(255,66,111,0.3);color:var(--danger)}
+.btn-danger:hover{background:var(--danger);color:#fff;box-shadow:0 8px 24px rgba(255,66,111,0.4)}
 
-    .control-row { display: flex; justify-content: center; gap: 20px; align-items: center; }
-    
-    .ctrl-btn {
-        background: none;
-        border: none;
-        color: var(--text-main);
-        cursor: pointer;
-        transition: 0.2s;
-        padding: 10px;
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-    }
-    .ctrl-btn:hover { background: rgba(255,255,255,0.1); color: var(--accent-2); }
-    .ctrl-btn.big {
-        width: 70px; height: 70px;
-        background: var(--gradient);
-        color: #000;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-    }
-    .ctrl-btn.big:hover { transform: scale(1.05); box-shadow: 0 15px 25px rgba(0,0,0,0.4); color: #000; }
-    
-    .mode-btn { font-size: 12px; color: var(--accent-1); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+/* ── Markdown Preview 美化 ── */
+#preview h1,#preview h2,#preview h3{font-family:'Space Grotesk',sans-serif;font-weight:700;color:#fff;margin-top:2em;margin-bottom:0.8em;line-height:1.3}
+#preview h1{font-size:32px;background:linear-gradient(90deg,#fff,var(--primary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.1)}
+#preview h2{font-size:24px;color:var(--primary)}
+#preview h3{font-size:20px}
+#preview p{margin-bottom:1.5em;color:#cfd6e6}
+#preview a{color:var(--primary);text-decoration:none;border-bottom:1px dashed var(--primary);transition:all 0.2s}
+#preview a:hover{color:var(--secondary);border-bottom-color:var(--secondary)}
+#preview pre{background:#0a0c14;border:1px solid var(--panel-border);border-radius:16px;padding:20px;overflow-x:auto;margin-bottom:1.5em;box-shadow:inset 0 4px 20px rgba(0,0,0,0.5)}
+#preview code{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--primary);background:rgba(0,229,255,0.1);padding:4px 8px;border-radius:8px;}
+#preview pre code{color:#e2e8f0;background:transparent;padding:0;}
+#preview blockquote{border-left:4px solid var(--secondary);background:linear-gradient(90deg, rgba(185,66,255,0.15), transparent);padding:16px 24px;border-radius:0 16px 16px 0;margin-bottom:1.5em;color:var(--text-muted);font-style:italic;}
+#preview ul,#preview ol{padding-left:1.8em;margin-bottom:1.5em;}
+#preview li{margin-bottom:8px}
+#preview li::marker{color:var(--primary)}
+#preview table{width:100%;border-collapse:collapse;margin-bottom:1.5em;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.2)}
+#preview th{background:rgba(255,255,255,0.05);padding:14px 20px;text-align:left;color:#fff;font-family:'Space Grotesk',sans-serif;}
+#preview td{padding:14px 20px;border-top:1px solid var(--panel-border);background:rgba(0,0,0,0.2)}
 
-    /* 滑桿樣式 */
-    .slider-container { width: 100%; padding: 0 10px; }
-    .label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; display: block; }
-    
-    input[type=range] {
-        -webkit-appearance: none;
-        width: 100%;
-        height: 6px;
-        background: rgba(255,255,255,0.1);
-        border-radius: 10px;
-        cursor: pointer;
-    }
-    input[type=range]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        height: 16px; width: 16px;
-        border-radius: 50%;
-        background: #fff;
-        box-shadow: 0 0 10px rgba(255,255,255,0.5);
-        margin-top: -5px; 
-    }
+/* ── Toasts & Modals ── */
+#toast-rack{position:fixed;top:32px;right:32px;z-index:500;display:flex;flex-direction:column;gap:12px;pointer-events:none}
+.toast{background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:16px;padding:16px 24px;font-size:14px;display:flex;align-items:center;gap:12px;min-width:260px;transform:translateX(150%);transition:all 0.4s cubic-bezier(.34,1.56,.64,1);opacity:0;pointer-events:auto;box-shadow:0 12px 40px rgba(0,0,0,0.5);backdrop-filter:blur(20px);}
+.toast.show{transform:translateX(0);opacity:1}
+.toast.success .t-dot{background:var(--success);box-shadow:0 0 12px var(--success)}
+.toast.info .t-dot{background:var(--primary);box-shadow:0 0 12px var(--primary)}
+.toast.warn .t-dot{background:var(--warn);box-shadow:0 0 12px var(--warn)}
+.toast.error .t-dot{background:var(--danger);box-shadow:0 0 12px var(--danger)}
+.t-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 
-    /* === 底部：頻譜 Visualizer === */
-    #spectrumWrap {
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        height: 120px;
-        pointer-events: none;
-        z-index: 1;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        gap: 4px;
-        padding-bottom: 0;
-        opacity: 0.5;
-        mask-image: linear-gradient(to top, black, transparent);
-        -webkit-mask-image: linear-gradient(to top, black, transparent);
-    }
-    .bar {
-        width: 10px;
-        background: linear-gradient(to top, var(--accent-1), var(--accent-2));
-        border-radius: 5px 5px 0 0;
-        transition: height 0.05s ease;
-        min-height: 4px;
-    }
+#modal-wrap{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.8);backdrop-filter:blur(16px);display:none;align-items:center;justify-content:center}
+#modal-wrap.open{display:flex}
+.modal{background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:28px;padding:40px;width:420px;text-align:center;animation:pop 0.3s cubic-bezier(.34,1.56,.64,1);box-shadow:0 24px 60px rgba(0,0,0,0.6);}
+@keyframes pop{from{transform:scale(0.85);opacity:0}to{transform:scale(1);opacity:1}}
+.modal h3{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;margin-bottom:16px;color:#fff}
+.modal p{font-size:15px;color:var(--text-muted);margin-bottom:32px;line-height:1.6}
 
-    /* RWD */
-    @media(max-width: 900px){
-        .wrap { flex-direction: column; height: auto; padding: 20px 0; overflow-y: auto; }
-        #left, #right, #center { width: 100%; height: auto; }
-        #musicBall { width: 120px; height: 120px; margin: 20px 0; }
-        .panel { margin-bottom: 12px; }
-        body { overflow-y: auto; display: block; height: auto; }
-        #spectrumWrap { position: fixed; bottom: 0; height: 80px; }
-    }
+/* Tags Modal */
+.tag-modal-body{text-align:left}
+.tag-edit-chip{padding:6px 14px;border-radius:10px;font-size:12px;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.2s}
+.tag-edit-chip:hover{transform:scale(0.95)}
+.color-swatches{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;transition:all 0.2s;}
+.swatch.sel{border:2px solid #fff;transform:scale(1.2);box-shadow:0 0 15px rgba(255,255,255,0.5)}
+
+/* Save indicator & Handles */
+.save-dot{width:10px;height:10px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
+.save-dot.saving{background:var(--primary);box-shadow:0 0 12px var(--primary);animation:pulse 1s infinite}
+.save-dot.saved{background:var(--success);box-shadow:0 0 12px var(--success)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.resize-handle{width:12px;cursor:col-resize;position:absolute;right:-6px;top:0;bottom:0;z-index:10;opacity:0;}
+.resize-handle:hover,.resize-handle.dragging{background:var(--primary-glow)}
+.main.focus-mode #editor{padding:60px min(100px, 15%);max-width:960px;margin:0 auto;width:100%;font-size:18px;}
 </style>
 </head>
 <body>
 
-<div class="wrap">
-    
-    <div id="left" class="panel">
-        <div class="list-header">
-            <span>播放清單</span>
-            <span style="font-size:12px;color:var(--text-muted)" id="trackCount">0 首歌曲</span>
-        </div>
-        <div class="playlist-scroll" id="playlistArea">
-            <div style="text-align:center; padding:40px 0; color:var(--text-muted); font-size:13px;">
-                點擊下方按鈕<br>加入音樂檔案
-            </div>
-        </div>
-        <div class="btn-group">
-            <label class="btn-file">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                新增音樂
-                <input type="file" id="fileInput" accept="audio/*" multiple style="display:none">
-            </label>
-            <button class="btn-ghost" id="clearBtn" title="清空清單">🗑</button>
-        </div>
-    </div>
+<div class="ambient-light"></div>
+<canvas id="bg"></canvas>
 
-    <div id="center" class="panel">
-        <div id="currentTitle">Glass Player</div>
-        <div id="currentTimeDisplay">00:00 / 00:00</div>
-        <div id="musicBall"></div>
-    </div>
-
-    <div id="right" class="panel">
-        <button class="mode-btn" id="modeBtn">循環播放: 全部</button>
-        
-        <div class="control-row">
-            <button class="ctrl-btn" id="prevBtn">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="3"></line></svg>
-            </button>
-            <button class="ctrl-btn big" id="playBtn">
-                <svg id="iconPlay" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                <svg id="iconPause" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-            </button>
-            <button class="ctrl-btn" id="nextBtn">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="3"></line></svg>
-            </button>
-        </div>
-
-        <div class="slider-container">
-            <span class="label">進度</span>
-            <input type="range" id="progressSlider" value="0" min="0" max="100">
-        </div>
-
-        <div class="slider-container">
-            <span class="label">音量</span>
-            <input type="range" id="volSlider" value="0.8" min="0" max="1" step="0.01">
-        </div>
-    </div>
+<div id="auth">
+  <div class="auth-card">
+    <div class="logo">Nova <span>Pro</span></div>
+    <div class="sub">V5.0 賽博終端機連線中</div>
+    <input id="u-user" class="field" type="text" placeholder="終端機 ID (帳號)">
+    <input id="u-pass" class="field" type="password" placeholder="通行密碼 (選填)">
+    <button class="btn btn-primary" onclick="handleAuth()" style="width:100%;padding:16px;margin-top:16px;font-size:16px;letter-spacing:1px;">啟動系統</button>
+    <div class="auth-err" id="auth-err"></div>
+  </div>
 </div>
 
-<div id="spectrumWrap"></div>
+<div class="app" id="app-body">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <div class="logo-mark">Nova <span>Pro</span></div>
+      <button class="btn btn-primary btn-sm" onclick="createNote()">+ 新筆記</button>
+    </div>
+    <div class="sb-search">
+      <span class="ico">⌕</span>
+      <input type="text" placeholder="搜尋資料庫..." oninput="debouncedFilter(this.value)">
+    </div>
+    <div class="tag-bar" id="tag-bar">
+      <div class="tag-chip active" data-tag="" onclick="setTagFilter('')">全部</div>
+    </div>
+    <div class="note-list" id="note-list"></div>
+    <div class="sb-foot">
+      <button class="btn btn-ghost btn-sm" onclick="triggerImport()" title="匯入" style="flex:1">⤴ 匯入</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportBackup()" title="備份" style="flex:1">⬇ 備份</button>
+      <button class="btn btn-ghost btn-sm" onclick="handleLogout()" style="flex:1;color:var(--danger);border-color:rgba(255,66,111,0.3)">登出</button>
+    </div>
+  </aside>
 
-<audio id="audioPlayer" crossorigin="anonymous"></audio>
+  <main class="main" id="main-area">
+    <header class="ed-header">
+      <button class="icon-btn" onclick="toggleSidebar()" title="側欄 (Ctrl+\)" style="font-size:20px;flex-shrink:0;color:var(--primary)">☰</button>
+      <input type="text" id="note-title" placeholder="請輸入標題..." oninput="onTitleInput()" disabled>
+      <div style="display:flex;gap:16px;align-items:center">
+        <div class="save-dot" id="save-dot" title="同步狀態"></div>
+        <div class="view-modes">
+          <button class="vm-btn" data-mode="edit" onclick="setViewMode('edit')">編輯</button>
+          <button class="vm-btn active" data-mode="split" onclick="setViewMode('split')">分欄</button>
+          <button class="vm-btn" data-mode="preview" onclick="setViewMode('preview')">預覽</button>
+        </div>
+        <button class="icon-btn" id="focus-btn" onclick="toggleFocus()" title="專注模式">⊙</button>
+        <button class="btn btn-primary btn-sm" onclick="saveNote()">儲存</button>
+      </div>
+    </header>
+
+    <div class="toolbar" id="toolbar">
+      <button class="tb-btn" onclick="md('**','**')" title="粗體">B</button>
+      <button class="tb-btn" onclick="md('*','*')" title="斜體">I</button>
+      <button class="tb-btn" onclick="md('~~','~~')" title="刪除線">S</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onclick="mdLine('# ')">H1</button>
+      <button class="tb-btn" onclick="mdLine('## ')">H2</button>
+      <button class="tb-btn" onclick="mdLine('### ')">H3</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onclick="mdLine('- ')">● 清單</button>
+      <button class="tb-btn" onclick="mdLine('- [ ] ')">☐ 待辦</button>
+      <button class="tb-btn" onclick="mdLine('> ')">❝ 引用</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onclick="md('`','`')">` 行內碼</button>
+      <button class="tb-btn" onclick="md('```\n','\n```')">&lt;/&gt; 程式碼</button>
+      <button class="tb-btn" onclick="insertTable()">⊞ 表格</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onclick="openTagModal()" style="color:var(--secondary)">🏷 標籤</button>
+      <button class="tb-btn" onclick="exportMD()" style="margin-left:auto;color:var(--primary)">↓ 下載 .md</button>
+    </div>
+
+    <div class="ed-body" id="ed-body">
+      <textarea id="editor" placeholder="在此輸入 Markdown 語法..." oninput="onEditorInput()" disabled spellcheck="false"></textarea>
+      <div id="preview" class="markdown-body"></div>
+    </div>
+
+    <footer class="statusbar">
+      <span id="stat-words">字元: 0 | 詞: 0</span>
+      <div class="sb-right">
+        <span id="stat-lines">行數: 1</span>
+        <span id="stat-time" style="color:var(--primary)">系統準備就緒</span>
+      </div>
+    </footer>
+  </main>
+</div>
+
+<div id="modal-wrap" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <h3 id="modal-title">確認</h3>
+    <p id="modal-msg">確定執行此操作？</p>
+    <div class="modal-btns" id="modal-btns"></div>
+  </div>
+</div>
+
+<div id="toast-rack"></div>
+<input type="file" id="file-import" accept=".md,.txt,.json" style="display:none" onchange="handleImport(this)">
 
 <script>
-    // === 變數宣告 ===
-    const fileInput = document.getElementById('fileInput');
-    const playlistArea = document.getElementById('playlistArea');
-    const audio = document.getElementById('audioPlayer');
-    const titleEl = document.getElementById('currentTitle');
-    const timeEl = document.getElementById('currentTimeDisplay');
-    const playBtn = document.getElementById('playBtn');
-    const iconPlay = document.getElementById('iconPlay');
-    const iconPause = document.getElementById('iconPause');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const progressSlider = document.getElementById('progressSlider');
-    const volSlider = document.getElementById('volSlider');
-    const modeBtn = document.getElementById('modeBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const trackCountEl = document.getElementById('trackCount');
-    const musicBall = document.getElementById('musicBall');
-    const spectrumWrap = document.getElementById('spectrumWrap');
+const API_URL = 'https://script.google.com/macros/s/AKfycbxFHsh0dsC4JRlLKLU4wA5kYL1ZRkMvHOCKnJhCuMhcuEsulGGcTLB9zPLu-LGCzNzDLQ/exec';
+const TAG_PALETTE = ['#00e5ff','#b942ff','#ff426f','#00ff88','#f0a742','#f472b6','#a78bfa','#34d399'];
 
-    let tracks = [];
-    let currentIdx = -1;
-    let isPlaying = false;
-    let mode = 'all'; // 'all', 'one', 'shuffle'
-    
-    // Audio Context 相關
-    let audioCtx, analyser, source, dataArray;
-    let animationId;
-    let isAudioCtxInit = false;
+/* ── Starfield (加強動態感) ── */
+const cv=document.getElementById('bg'),cx=cv.getContext('2d');
+let stars=[];
+function resizeCv(){cv.width=innerWidth;cv.height=innerHeight;stars=Array.from({length:250},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.8+0.2,a:Math.random(),v:Math.random()*0.015+0.005}))}
+window.addEventListener('resize',resizeCv);resizeCv();
+(function tick(){cx.clearRect(0,0,cv.width,cv.height);stars.forEach(s=>{s.a+=s.v;if(s.a>1||s.a<0.1)s.v*=-1;s.y-=0.15;if(s.y<0)s.y=cv.height;cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);cx.fillStyle=`rgba(255,255,255,${s.a})`;cx.fill()});requestAnimationFrame(tick)})();
 
-    // === 初始化頻譜條 ===
-    const BAR_COUNT = 60;
-    for(let i=0; i<BAR_COUNT; i++){
-        const bar = document.createElement('div');
-        bar.className = 'bar';
-        bar.style.width = `calc(100% / ${BAR_COUNT} - 4px)`;
-        bar.style.height = '4px';
-        spectrumWrap.appendChild(bar);
+/* ── State ── */
+let S={user:'',notes:{},active:'',isDirty:false,viewMode:'split',focusMode:false,tagFilter:'',searchQ:'',saveTimer:null,selectedColor:TAG_PALETTE[0]};
+
+/* ── Auth ── */
+async function handleAuth(){
+  const u=document.getElementById('u-user').value.trim();
+  if(!u){document.getElementById('auth-err').textContent='請輸入終端機 ID';return}
+  S.user=u;setSaveDot('saving');
+  try{
+    const r=await fetch(`${API_URL}?action=get&user=${encodeURIComponent(u)}`);
+    const d=await r.json();S.notes=d.data||{};
+  }catch(e){
+    const ld=localStorage.getItem(`nn_${u}`);
+    if(ld)S.notes=JSON.parse(ld);
+    toast('離線模式（本地儲存）','warn');
+  }
+  document.getElementById('auth').style.display='none';
+  document.getElementById('editor').disabled=false;
+  document.getElementById('note-title').disabled=false;
+  setSaveDot('saved');
+  renderList();
+  toast(`歡迎回來，特工 ${u} ✦`,'success');
+}
+function handleLogout(){
+  showModal('登出系統','確定要中斷連線嗎？未儲存的資料將會遺失。',[
+    {label:'取消',cls:'btn-ghost',fn:closeModalNow},
+    {label:'登出',cls:'btn-danger',fn:()=>{location.reload()}}
+  ]);
+}
+
+/* ── Note operations ── */
+function createNote(){
+  const id=`草稿_${Date.now().toString().slice(-5)}`;
+  S.notes[id]={content:'',tags:[],pinned:false,updatedAt:new Date().toISOString()};
+  loadNote(id);saveNote();
+  document.getElementById('editor').focus();
+}
+
+function loadNote(title){
+  if(S.isDirty){
+    showModal('未儲存警告',`「${S.active}」尚未同步，是否先儲存？`,[
+      {label:'放棄變更',cls:'btn-ghost',fn:()=>{closeModalNow();_doLoad(title)}},
+      {label:'先儲存',cls:'btn-primary',fn:()=>{closeModalNow();saveNote();_doLoad(title)}}
+    ]);return;
+  }
+  _doLoad(title);
+}
+function _doLoad(title){
+  S.active=title;S.isDirty=false;
+  const n=S.notes[title];
+  document.getElementById('note-title').value=title;
+  document.getElementById('editor').value=n?n.content:'';
+  updatePreview();updateStats();renderList();
+}
+
+async function saveNote(){
+  const title=document.getElementById('note-title').value.trim();
+  const content=document.getElementById('editor').value;
+  if(!title){document.getElementById('note-title').classList.add('err');toast('需要填寫標題','error');return}
+  document.getElementById('note-title').classList.remove('err');
+  if(S.active&&S.active!==title){delete S.notes[S.active]}
+  if(!S.notes[title])S.notes[title]={tags:[],pinned:false};
+  S.notes[title].content=content;
+  S.notes[title].updatedAt=new Date().toISOString();
+  S.active=title;S.isDirty=false;
+  setSaveDot('saving');
+  try{
+    await fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'set',user:S.user,data:S.notes})});
+    setSaveDot('saved');
+  }catch(e){setSaveDot('error');toast('同步失敗，已本地儲存','warn')}
+  localStorage.setItem(`nn_${S.user}`,JSON.stringify(S.notes));
+  updateStatTime();renderList();
+}
+
+function deleteNote(e,title){
+  e.stopPropagation();
+  showModal('刪除檔案',`確定永久刪除 [ ${title} ] ？`,[
+    {label:'取消',cls:'btn-ghost',fn:closeModalNow},
+    {label:'刪除',cls:'btn-danger',fn:()=>{
+      closeModalNow();
+      delete S.notes[title];
+      if(S.active===title){S.active='';document.getElementById('note-title').value='';document.getElementById('editor').value='';updatePreview();updateStats()}
+      saveNote();renderList();toast(`已刪除：${title}`,'warn');
+    }}
+  ]);
+}
+
+function togglePin(e,title){
+  e.stopPropagation();
+  const n=S.notes[title];if(!n)return;
+  n.pinned=!n.pinned;
+  saveNote();
+}
+
+/* ── Tag management ── */
+function openTagModal(){
+  if(!S.active){toast('請先選擇一篇筆記','warn');return}
+  document.getElementById('modal-title').textContent='標籤設定';
+  const body=document.createElement('div');body.className='tag-modal-body';
+  body.innerHTML=`
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">目前的標籤</div>
+    <div id="tag-edit-list" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px"></div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">新增標籤</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <input type="text" id="tag-input" class="field" placeholder="標籤名稱" style="flex:1;padding:12px 16px;margin-bottom:0" maxlength="12">
+      <button class="btn btn-primary" style="padding:12px 20px" onclick="addTagToNote()">新增</button>
+    </div>
+    <div class="color-swatches" id="color-swatches"></div>
+  `;
+  document.getElementById('modal-msg').innerHTML='';
+  document.getElementById('modal-msg').appendChild(body);
+  renderTagEditList();
+  const sw=document.getElementById('color-swatches');
+  TAG_PALETTE.forEach(c=>{
+    const d=document.createElement('div');d.className='swatch'+(c===S.selectedColor?' sel':'');
+    d.style.background=c;d.onclick=()=>{S.selectedColor=c;document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('sel'));d.classList.add('sel')};
+    sw.appendChild(d);
+  });
+  document.getElementById('modal-btns').innerHTML='';
+  const close=document.createElement('button');close.className='btn btn-ghost';close.textContent='完成';
+  close.onclick=()=>{closeModalNow();renderList();renderTagBar()};
+  document.getElementById('modal-btns').appendChild(close);
+  document.getElementById('modal-wrap').classList.add('open');
+  setTimeout(()=>document.getElementById('tag-input')?.focus(),100);
+}
+
+function renderTagEditList(){
+  const n=S.notes[S.active];if(!n)return;
+  const el=document.getElementById('tag-edit-list');if(!el)return;
+  el.innerHTML=(n.tags||[]).map(t=>`
+    <div class="tag-edit-chip" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}66" onclick="removeTag('${t.name}')">
+      ${t.name} <span style="font-size:10px;margin-left:4px">✕</span>
+    </div>`).join('')||'<span style="font-size:13px;color:var(--text-dim)">尚未設定標籤</span>';
+}
+
+function addTagToNote(){
+  const inp=document.getElementById('tag-input');if(!inp)return;
+  const name=inp.value.trim();if(!name)return;
+  const n=S.notes[S.active];if(!n)return;
+  if(!n.tags)n.tags=[];
+  if(n.tags.find(t=>t.name===name)){toast('標籤已存在','warn');return}
+  n.tags.push({name,color:S.selectedColor});
+  inp.value='';renderTagEditList();renderTagBar();
+}
+
+function removeTag(name){
+  const n=S.notes[S.active];if(!n||n.tags)return;
+  n.tags=n.tags.filter(t=>t.name!==name);renderTagEditList();renderTagBar();
+}
+
+/* ── Render ── */
+let searchDebounceTimer;
+function debouncedFilter(q) { clearTimeout(searchDebounceTimer); searchDebounceTimer = setTimeout(() => { filterNotes(q); }, 250); }
+
+function renderList(){
+  const list=document.getElementById('note-list');
+  let titles=Object.keys(S.notes);
+  if(S.searchQ)titles=titles.filter(t=>t.toLowerCase().includes(S.searchQ)||( S.notes[t].content||'').toLowerCase().includes(S.searchQ));
+  if(S.tagFilter)titles=titles.filter(t=>(S.notes[t].tags||[]).some(tg=>tg.name===S.tagFilter));
+  titles.sort((a,b)=>{
+    const pa=S.notes[a].pinned?1:0,pb=S.notes[b].pinned?1:0;
+    if(pa!==pb)return pb-pa;
+    return new Date(S.notes[b].updatedAt||0)-new Date(S.notes[a].updatedAt||0);
+  });
+  if(!titles.length){
+    list.innerHTML=`<div style="text-align:center;padding:60px 20px;color:var(--text-dim)"><div style="font-size:36px;margin-bottom:12px;opacity:0.3">✦</div><div>找不到資料庫紀錄</div></div>`;return;
+  }
+  list.innerHTML=titles.map((t, idx)=>{
+    const n=S.notes[t];
+    const active=S.active===t?'active':'';
+    const tags=(n.tags||[]).map(tg=>`<span class="note-tag" style="background:${tg.color}22;color:${tg.color}">${tg.name}</span>`).join('');
+    const pinned=n.pinned?`<div class="note-pin">📌 已釘選</div>`:'';
+    const time=n.updatedAt?fmtTime(new Date(n.updatedAt)):'';
+    const esc=t.replace(/'/g,"\\'");
+    return`<div class="note-item ${active}" style="animation-delay: ${idx * 0.04}s" onclick="loadNote('${esc}')">
+      <div class="note-body">
+        ${pinned}
+        <div class="note-title">${escHtml(t)}</div>
+        <div class="note-meta">${tags}<span style="opacity:0.6">${time}</span></div>
+      </div>
+      <div class="note-actions">
+        <button class="icon-btn ${n.pinned?'pin-active':''}" onclick="togglePin(event,'${esc}')" title="${n.pinned?'取消釘選':'釘選'}">📌</button>
+        <button class="icon-btn danger" onclick="deleteNote(event,'${esc}')" title="刪除">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTagBar(){
+  const bar=document.getElementById('tag-bar');
+  const allTags={};
+  Object.values(S.notes).forEach(n=>(n.tags||[]).forEach(t=>{allTags[t.name]=t.color}));
+  let html=`<div class="tag-chip ${!S.tagFilter?'active':''}" data-tag="" onclick="setTagFilter('')">全部</div>`;
+  Object.entries(allTags).forEach(([name,color])=>{
+    const act=S.tagFilter===name?'active':'';
+    html+=`<div class="tag-chip ${act}" data-tag="${name}" onclick="setTagFilter('${name}')" style="${act?`border-color:${color};color:#000;background:${color}`:''}">
+      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${act?'#000':color};margin-right:6px;vertical-align:middle"></span>${name}</div>`;
+  });
+  bar.innerHTML=html;
+}
+
+function setTagFilter(tag){S.tagFilter=tag;renderList();renderTagBar()}
+function filterNotes(q){S.searchQ=q.toLowerCase();renderList()}
+
+/* ── Editor helpers ── */
+function onEditorInput(){
+  S.isDirty=true;updateStats();updatePreview();
+  clearTimeout(S.saveTimer);S.saveTimer=setTimeout(saveNote,2500);
+  setSaveDot('saving');
+}
+function onTitleInput(){
+  const el=document.getElementById('note-title');
+  el.classList.toggle('err',!el.value.trim());
+  S.isDirty=true;
+  clearTimeout(S.saveTimer);S.saveTimer=setTimeout(saveNote,2500);
+}
+function updatePreview(){
+  if(S.viewMode==='edit')return;
+  const val=document.getElementById('editor').value;
+  document.getElementById('preview').innerHTML=marked.parse(val||'*[ 尚無內容 ]*');
+}
+function updateStats(){
+  const val=document.getElementById('editor').value;
+  const chars=val.length;
+  const words=val.trim()?val.trim().split(/\s+/).filter(Boolean).length:0;
+  const lines=val.split('\n').length;
+  document.getElementById('stat-words').textContent=`字元: ${chars} | 詞彙: ${words}`;
+  document.getElementById('stat-lines').textContent=`行數: ${lines}`;
+}
+function updateStatTime(){
+  const now = new Date();
+  document.getElementById('stat-time').textContent=`最後同步：${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+}
+
+/* ── Markdown insert ── */
+function md(pre,suf){
+  const ta=document.getElementById('editor');
+  const s=ta.selectionStart,e=ta.selectionEnd;
+  const sel=ta.value.slice(s,e);
+  ta.value=ta.value.slice(0,s)+pre+sel+suf+ta.value.slice(e);
+  ta.selectionStart=s+pre.length;ta.selectionEnd=s+pre.length+sel.length;
+  ta.focus();onEditorInput();
+}
+function mdLine(pre){
+  const ta=document.getElementById('editor');
+  const s=ta.selectionStart;
+  const lineStart=ta.value.lastIndexOf('\n',s-1)+1;
+  ta.value=ta.value.slice(0,lineStart)+pre+ta.value.slice(lineStart);
+  ta.selectionStart=ta.selectionEnd=s+pre.length;
+  ta.focus();onEditorInput();
+}
+function insertTable(){
+  const tbl='\n| 標題 1 | 標題 2 | 標題 3 |\n| --- | --- | --- |\n| 資料 | 資料 | 資料 |\n';
+  const ta=document.getElementById('editor');
+  const s=ta.selectionStart;
+  ta.value=ta.value.slice(0,s)+tbl+ta.value.slice(s);
+  ta.selectionStart=ta.selectionEnd=s+tbl.length;
+  ta.focus();onEditorInput();
+}
+
+/* ── View mode ── */
+function setViewMode(mode){
+  S.viewMode=mode;
+  const ed=document.getElementById('editor');
+  const pv=document.getElementById('preview');
+  document.querySelectorAll('.vm-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  if(mode==='edit'){ed.style.display='block';pv.style.display='none';ed.style.flex='1'}
+  else if(mode==='split'){ed.style.display='block';pv.style.display='block';ed.style.flex='1';pv.style.flex='1';updatePreview()}
+  else{ed.style.display='none';pv.style.display='block';pv.style.flex='1';updatePreview()}
+}
+function toggleFocus(){
+  S.focusMode=!S.focusMode;
+  document.getElementById('main-area').classList.toggle('focus-mode',S.focusMode);
+  document.getElementById('focus-btn').style.color=S.focusMode?'var(--primary)':'';
+  if(S.focusMode){document.getElementById('sidebar').classList.add('hidden');toast('專注模式已啟動','info')}
+  else{document.getElementById('sidebar').classList.remove('hidden')}
+}
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');sb.classList.toggle('hidden');
+}
+
+/* ── Import / Export ── */
+function triggerImport(){document.getElementById('file-import').click()}
+function handleImport(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const txt=e.target.result;
+    if(file.name.endsWith('.json')){
+      try{
+        const data=JSON.parse(txt);
+        if(typeof data==='object'&&!Array.isArray(data)){
+          Object.assign(S.notes,data);saveNote();renderList();renderTagBar();toast(`JSON 備份已匯入`,'success')}
+        else toast('JSON 格式無效','error');
+      }catch{toast('JSON 解析錯誤','error')}
+    }else{
+      const name=file.name.replace(/\.md|\.txt$/,'');
+      S.notes[name]={content:txt,tags:[],pinned:false,updatedAt:new Date().toISOString()};
+      loadNote(name);saveNote();toast(`檔案已匯入：${name}`,'success');
     }
-    const bars = document.querySelectorAll('.bar');
+  };reader.readAsText(file);input.value='';
+}
+function exportMD(){
+  if(!S.active){toast('請先選擇要匯出的筆記','warn');return}
+  dl(document.getElementById('editor').value,`${S.active}.md`,'text/markdown');
+}
+function exportBackup(){
+  dl(JSON.stringify(S.notes,null,2),'nova_db_backup.json','application/json');
+  toast('資料庫備份已下載','success');
+}
+function dl(data,name,type){
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;a.click();
+}
 
-    // === 音頻視覺化邏輯 ===
-    function initAudioContext() {
-        if(isAudioCtxInit) return;
-        try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 256; // 頻率精度
-            source = audioCtx.createMediaElementSource(audio);
-            source.connect(analyser);
-            analyser.connect(audioCtx.destination);
-            
-            dataArray = new Uint8Array(analyser.frequencyBinCount);
-            isAudioCtxInit = true;
-            renderVisualizer();
-        } catch(e) {
-            console.error("Audio Context Init Failed:", e);
-        }
-    }
+/* ── Modal & Toast ── */
+function showModal(title,msg,buttons){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-msg').textContent=msg;
+  const btns=document.getElementById('modal-btns');
+  btns.innerHTML='';
+  buttons.forEach(b=>{
+    const el=document.createElement('button');
+    el.className=`btn ${b.cls}`;el.textContent=b.label;el.onclick=b.fn;
+    btns.appendChild(el);
+  });
+  document.getElementById('modal-wrap').classList.add('open');
+}
+function closeModal(e){if(e.target===document.getElementById('modal-wrap'))closeModalNow()}
+function closeModalNow(){
+  document.getElementById('modal-wrap').classList.remove('open');
+}
+function toast(msg,type='info'){
+  const rack=document.getElementById('toast-rack');
+  const el=document.createElement('div');el.className=`toast ${type}`;
+  el.innerHTML=`<div class="t-dot"></div><span style="font-weight:600;font-family:'Space Grotesk',sans-serif">${msg}</span>`;
+  rack.appendChild(el);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('show')));
+  setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),400)},3000);
+}
+function setSaveDot(state){
+  const d=document.getElementById('save-dot');
+  d.className='save-dot '+state;
+}
 
-    function renderVisualizer() {
-        animationId = requestAnimationFrame(renderVisualizer);
-        if(!analyser) return;
+/* ── Sidebar resize ── */
+(function(){
+  const sb=document.getElementById('sidebar');
+  let dragging=false,startX=0,startW=0;
+  const handle=document.createElement('div');handle.className='resize-handle';sb.appendChild(handle);
+  handle.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startW=sb.offsetWidth;handle.classList.add('dragging');e.preventDefault()});
+  document.addEventListener('mousemove',e=>{if(!dragging)return;const w=Math.max(260,Math.min(500,startW+(e.clientX-startX)));sb.style.setProperty('--sidebar-w',w+'px');sb.style.width=w+'px'});
+  document.addEventListener('mouseup',()=>{if(dragging){dragging=false;handle.classList.remove('dragging')}});
+})();
 
-        analyser.getByteFrequencyData(dataArray);
+function fmtTime(d){
+  const now=new Date(),diff=now-d;
+  if(diff<60000)return '剛剛';
+  if(diff<3600000)return Math.floor(diff/60000)+' 分鐘前';
+  if(diff<86400000)return Math.floor(diff/3600000)+' 小時前';
+  return d.toLocaleDateString('zh-TW',{month:'short',day:'numeric'});
+}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&quot;')}
 
-        // 1. 更新底部頻譜
-        const step = Math.floor(dataArray.length / BAR_COUNT);
-        let bassTotal = 0;
-        
-        for (let i = 0; i < BAR_COUNT; i++) {
-            const value = dataArray[i * step];
-            const height = Math.max(4, (value / 255) * 120);
-            bars[i].style.height = height + 'px';
-            
-            // 計算低音 (前幾條)
-            if(i < 8) bassTotal += value;
-        }
+/* ── Init ── */
+document.getElementById('u-pass').addEventListener('keydown',e=>{if(e.key==='Enter')handleAuth()});
+document.getElementById('u-user').addEventListener('keydown',e=>{if(e.key==='Enter')handleAuth()});
 
-        // 2. 更新 Music Ball 跳動效果 (基於低音)
-        const bassAvg = bassTotal / 8;
-        const scale = 1 + (bassAvg / 255) * 0.4; // 1.0 ~ 1.4
-        musicBall.style.transform = `scale(${scale})`;
-        
-        // 增加顏色旋轉效果
-        musicBall.style.filter = `hue-rotate(${bassAvg}deg)`;
-    }
+setViewMode(S.viewMode);
 
-    // === 播放清單功能 ===
-    fileInput.addEventListener('change', function(e) {
-        const files = Array.from(e.target.files);
-        if(files.length === 0) return;
-
-        files.forEach(file => {
-            const url = URL.createObjectURL(file);
-            tracks.push({ name: file.name.replace(/\.[^/.]+$/, ""), url: url });
-        });
-        
-        renderPlaylist();
-        
-        if(currentIdx === -1 && tracks.length > 0) {
-            loadTrack(0, false);
-        }
-        
-        this.value = '';
-    });
-
-    function renderPlaylist() {
-        playlistArea.innerHTML = '';
-        trackCountEl.textContent = `${tracks.length} 首歌曲`;
-        
-        if(tracks.length === 0) {
-            playlistArea.innerHTML = '<div style="text-align:center; padding:40px 0; color:var(--text-muted); font-size:13px;">清單已空</div>';
-            return;
-        }
-
-        tracks.forEach((track, index) => {
-            const div = document.createElement('div');
-            div.className = `track-item ${index === currentIdx ? 'active' : ''}`;
-            div.innerHTML = `
-                <div class="track-info">
-                    <div class="track-name">${index + 1}. ${track.name}</div>
-                </div>
-            `;
-            div.onclick = () => loadTrack(index, true);
-            playlistArea.appendChild(div);
-        });
-    }
-
-    // === 播放核心控制 ===
-    function loadTrack(index, autoPlay = true) {
-        if(index < 0 || index >= tracks.length) return;
-        
-        currentIdx = index;
-        audio.src = tracks[index].url;
-        titleEl.textContent = tracks[index].name;
-        
-        renderPlaylist();
-        
-        if(autoPlay) {
-            playAudio();
-        } else {
-            updatePlayBtnUI(false);
-        }
-    }
-
-    function playAudio() {
-        initAudioContext();
-        if(audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-
-        audio.play().then(() => {
-            isPlaying = true;
-            updatePlayBtnUI(true);
-        }).catch(err => console.log('播放被阻擋或失敗', err));
-    }
-
-    function pauseAudio() {
-        audio.pause();
-        isPlaying = false;
-        updatePlayBtnUI(false);
-        musicBall.style.transform = 'scale(1)';
-    }
-
-    function updatePlayBtnUI(playing) {
-        if(playing) {
-            iconPlay.style.display = 'none';
-            iconPause.style.display = 'block';
-        } else {
-            iconPlay.style.display = 'block';
-            iconPause.style.display = 'none';
-        }
-    }
-
-    playBtn.onclick = () => {
-        if(tracks.length === 0) return;
-        if(audio.paused) playAudio();
-        else pauseAudio();
-    };
-
-    // === 切換歌曲 ===
-    function nextTrack() {
-        if(tracks.length === 0) return;
-        if(mode === 'shuffle') {
-            let next = Math.floor(Math.random() * tracks.length);
-            loadTrack(next, true);
-        } else if (mode === 'one') {
-            audio.currentTime = 0;
-            playAudio();
-        } else {
-            let next = currentIdx + 1;
-            if(next >= tracks.length) next = 0;
-            loadTrack(next, true);
-        }
-    }
-
-    function prevTrack() {
-        if(tracks.length === 0) return;
-        let prev = currentIdx - 1;
-        if(prev < 0) prev = tracks.length - 1;
-        loadTrack(prev, true);
-    }
-
-    nextBtn.onclick = nextTrack;
-    prevBtn.onclick = prevTrack;
-    audio.addEventListener('ended', nextTrack);
-
-    // === 進度條與時間 ===
-    audio.addEventListener('timeupdate', () => {
-        if(!audio.duration) return;
-        const pct = (audio.currentTime / audio.duration) * 100;
-        progressSlider.value = pct;
-        timeEl.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
-        progressSlider.style.background = `linear-gradient(to right, var(--accent-2) ${pct}%, rgba(255,255,255,0.1) ${pct}%)`;
-    });
-
-    progressSlider.addEventListener('input', (e) => {
-        if(!audio.duration) return;
-        const time = (e.target.value / 100) * audio.duration;
-        audio.currentTime = time;
-    });
-
-    function formatTime(s) {
-        const m = Math.floor(s / 60);
-        const sec = Math.floor(s % 60);
-        return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-    }
-
-    // === 音量 ===
-    volSlider.addEventListener('input', (e) => {
-        audio.volume = e.target.value;
-    });
-
-    // === 模式切換 ===
-    modeBtn.onclick = () => {
-        if(mode === 'all') {
-            mode = 'one';
-            modeBtn.textContent = '循環: 單曲';
-            modeBtn.style.color = '#fff';
-        } else if(mode === 'one') {
-            mode = 'shuffle';
-            modeBtn.textContent = '模式: 隨機';
-            modeBtn.style.color = 'var(--accent-2)';
-        } else {
-            mode = 'all';
-            modeBtn.textContent = '循環: 全部';
-            modeBtn.style.color = 'var(--accent-1)';
-        }
-    };
-
-    // === 清空 ===
-    clearBtn.onclick = () => {
-        audio.pause();
-        audio.src = '';
-        tracks = [];
-        currentIdx = -1;
-        isPlaying = false;
-        titleEl.textContent = 'Glass Player';
-        timeEl.textContent = '00:00 / 00:00';
-        updatePlayBtnUI(false);
-        renderPlaylist();
-        musicBall.style.transform = 'scale(1)';
-    };
-    // === 預設歌曲 ===
-window.addEventListener("load", () => {
-
-    const defaultTrack = {
-        name: "校門口那條熟悉的路",
-        url: "校門口那條熟悉的路.mp3"
-    };
-
-    tracks.push(defaultTrack);
-
-    renderPlaylist();
-
-    loadTrack(0, true); // 載入但不自動播放
+const editorEl = document.getElementById('editor');
+const previewEl = document.getElementById('preview');
+editorEl.addEventListener('scroll', () => {
+  if (S.viewMode === 'split') {
+    const percentage = editorEl.scrollTop / (editorEl.scrollHeight - editorEl.clientHeight);
+    previewEl.scrollTop = percentage * (previewEl.scrollHeight - previewEl.clientHeight);
+  }
 });
 </script>
 </body>
