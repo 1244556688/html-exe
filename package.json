@@ -1,11 +1,12 @@
 {
   "name": "myapp",
   "version": "1.0.0",
+  "author": "Your Name",
   "description": "My Electron App",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win --publish always"
   },
   "devDependencies": {
     "electron": "^38.8.6",
@@ -19,6 +20,11 @@
     },
     "win": {
       "target": "nsis"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github"
+      }
+    ]
   }
 }
